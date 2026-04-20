@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoppeFin | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+        }
+
+        .input-style {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(203, 213, 225, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .input-style:focus {
+            background: white;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .read-only-panel {
+            background: rgba(241, 245, 249, 0.5);
+            border-radius: 16px;
+        }
+
+        /* Animação suave para os dados aparecendo */
+        #descricao, #banco, #titular {
+            transition: color 0.5s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-xl w-full glass-card rounded-[32px] overflow-hidden">
+        <div class="p-10">
+            <div class="flex items-center justify-between mb-10">
+                <div>
+                    <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">
+                        Poppe<span class="text-indigo-600">Fin</span>
+                    </h1>
+                    <div id="statusIndicator" class="flex items-center gap-1.5 mt-1">
+                        <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sincronizando</span>
+                    </div>
+                </div>
+                <div class="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
+                    <i class="fas fa-plus text-xl"></i>
+                </div>
+            </div>
+
+            <form id="financeForm" class="space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">ID Conta</label>
+                        <input type="text" id="idConta" placeholder="Ex: 1" required list="contasData" 
+                            class="input-style w-full rounded-2xl p-4 outline-none text-slate-700 font-medium">
+                        <datalist id="contasData"></datalist>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">Fluxo</label>
+                        <select id="tipo" class="input-style w-full rounded-2xl p-4 outline-none text-slate-700 font-medium cursor-pointer appearance-none">
+                            <option value="Entrada">🟢 Entrada</option>
+                            <option value="Saída">🔴 Saída</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">Aporte</label>
+                        <input type="text" id="valorAporteDisplay" required placeholder="R$ 0,00"
+                            class="input-style w-full rounded-2xl p-4 outline-none text-emerald-600 font-bold">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">Rendimento</label>
+                        <input type="text" id="valorRendimentoDisplay" placeholder="R$ 0,00"
+                            class="input-style w-full rounded-2xl p-4 outline-none text-indigo-600 font-bold">
+                    </div>
+                </div>
+
+                <div class="read-only-panel p-6 space-y-4">
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-1">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Banco</p>
+                            <input type="text" id="banco" readonly placeholder="---" class="bg-transparent w-full text-slate-700 font-bold outline-none">
+                        </div>
+                        <div class="col-span-2">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Descrição</p>
+                            <input type="text" id="descricao" readonly placeholder="Aguardando ID..." class="bg-transparent w-full text-slate-700 font-bold outline-none">
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t border-slate-200">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Titular da Conta</p>
+                        <input type="text" id="titular" readonly class="bg-transparent w-full text-slate-500 text-sm italic outline-none">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmit" class="w-full bg-slate-800 hover:bg-indigo-600 text-white font-bold py-5 rounded-2xl shadow-lg transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-3">
+                    <span>Confirmar Lançamento</span>
+                    <i class="fas fa-arrow-right text-sm opacity-50"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoapiR4Mtjic8yLSjCcZ4I1dsClIMyV6ReaPmzYmNxKa4wUpEEAKUGBnDmc_XAqxZ1Bw/exec';
+        let baseContas = [];
+
+        function formatarMoeda(valor) {
+            valor = valor.replace(/\D/g, "");
+            valor = (valor / 100).toFixed(2) + "";
+            valor = valor.replace(".", ",");
+            valor = valor.replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,");
+            valor = valor.replace(/(\d)(\d{3}),/g, "$1.$2,");
+            return "R$ " + valor;
+        }
+
+        function descascarMoeda(valorStr) {
+            if (!valorStr) return 0;
+            return parseFloat(valorStr.replace("R$ ", "").replace(/\./g, "").replace(",", "."));
+        }
+
+        [document.getElementById('valorAporteDisplay'), document.getElementById('valorRendimentoDisplay')].forEach(input => {
+            input.addEventListener('input', (e) => e.target.value = formatarMoeda(e.target.value));
+        });
+
+        async function loadContas() {
+            const status = document.getElementById('statusIndicator');
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getContas&t=${Date.now()}`);
+                const data = await response.json();
+                baseContas = data;
+                
+                const datalist = document.getElementById('contasData');
+                datalist.innerHTML = '';
+                baseContas.forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c.ID;
+                    datalist.appendChild(opt);
+                });
+
+                status.innerHTML = '<span class="h-2 w-2 rounded-full bg-emerald-400"></span><span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Conectado</span>';
+            } catch (e) {
+                status.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-400"></span><span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Erro</span>';
+            }
+        }
+
+        document.getElementById('idConta').addEventListener('input', (e) => {
+            const idBuscado = e.target.value.trim();
+            const conta = baseContas.find(c => String(c.ID).trim() === idBuscado);
+            
+            if (conta) {
+                document.getElementById('banco').value = conta.BANCO || "";
+                document.getElementById('descricao').value = conta.DESCRIÇÃO || "";
+                document.getElementById('titular').value = conta['TITULAR CONTA'] || conta['TITULAR'] || "";
+                document.getElementById('descricao').style.color = "#4f46e5";
+            } else {
+                ['banco', 'descricao', 'titular'].forEach(id => {
+                    document.getElementById(id).value = '';
+                    if(id === 'descricao') document.getElementById(id).style.color = "";
+                });
+            }
+        });
+
+        document.getElementById('financeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmit');
+            if (!document.getElementById('banco').value) { alert("ID Inválido!"); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gravando...';
+
+            const payload = {
+                idConta: document.getElementById('idConta').value,
+                tipo: document.getElementById('tipo').value,
+                valorAporte: descascarMoeda(document.getElementById('valorAporteDisplay').value),
+                valorRendimento: descascarMoeda(document.getElementById('valorRendimentoDisplay').value),
+                descricao: document.getElementById('descricao').value,
+                banco: document.getElementById('banco').value,
+                titular: document.getElementById('titular').value
+            };
+
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                alert('Lançamento realizado com sucesso!');
+                e.target.reset();
+                ['banco', 'descricao', 'titular'].forEach(id => document.getElementById(id).value = '');
+            } catch (err) {
+                alert('Erro ao salvar.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Confirmar Lançamento</span><i class="fas fa-arrow-right text-sm opacity-50"></i>';
+            }
+        });
+
+        loadContas();
+    </script>
+</body>
+</html>
